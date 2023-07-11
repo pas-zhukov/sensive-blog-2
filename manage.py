@@ -1,5 +1,7 @@
 import os
 import sys
+import logging
+logging.basicConfig(level=logging.WARNING, filename="py_log.log", filemode="w+")
 
 if __name__ == '__main__':
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sensive_blog.settings')
