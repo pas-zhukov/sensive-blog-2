@@ -6,13 +6,15 @@ from django.contrib.auth.models import User
 class TagQuerySet(models.QuerySet):
 
     def popular(self):
-        return self.annotate(posts_count=models.Count('posts')).order_by('-posts_count')
+        return self.annotate(posts_count=models.Count('posts')) \
+                   .order_by('-posts_count')
 
 
 class PostQuerySet(models.QuerySet):
 
     def popular(self):
-        return self.annotate(models.Count('likes', distinct=True)).order_by('-likes__count')
+        return self.annotate(models.Count('likes', distinct=True))\
+                   .order_by('-likes__count')
 
     def fetch_with_comments_count(self):
         """
@@ -20,13 +22,15 @@ class PostQuerySet(models.QuerySet):
         the queryset and adds it as a new attribute
         to each post object. Useful if you don't want
         to use second 'annotate' method in your query,
-        because it slows down the query.
+        in case it slows down the query.
 
         :return: posts query with comments_count field
         """
         posts_ids = [post.id for post in self]
-        posts_with_comments = Post.objects.filter(id__in=posts_ids).annotate(
-            comments_count=models.Count('comments'))
+        posts_with_comments = Post.objects \
+                                  .filter(id__in=posts_ids) \
+                                  .annotate(comments_count=models.Count('comments'))
+
         ids_and_comments = posts_with_comments.values_list('id', 'comments_count')
         count_for_id = dict(ids_and_comments)
         for post in self:
@@ -34,11 +38,8 @@ class PostQuerySet(models.QuerySet):
         return self
 
     def fetch_with_tags(self):
-        return self.prefetch_related(models.Prefetch('tags', queryset=Tag.objects.annotate(posts_count=models.Count('posts'))))
-
-    def year(self, year):
-        posts_at_year = self.filter(published_at__year=year).order_by('published_at')
-        return posts_at_year
+        tags = models.Prefetch('tags', queryset=Tag.objects.annotate(posts_count=models.Count('posts')))
+        return self.prefetch_related(tags)
 
 
 class Post(models.Model):
