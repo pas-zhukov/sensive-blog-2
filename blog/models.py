@@ -33,6 +33,9 @@ class PostQuerySet(models.QuerySet):
             post.comments_count = count_for_id[post.id]
         return self
 
+    def fetch_with_tags(self):
+        return self.prefetch_related(models.Prefetch('tags', queryset=Tag.objects.annotate(posts_count=models.Count('posts'))))
+
     def year(self, year):
         posts_at_year = self.filter(published_at__year=year).order_by('published_at')
         return posts_at_year
