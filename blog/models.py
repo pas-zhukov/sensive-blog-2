@@ -3,12 +3,48 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 
 
+class TagQuerySet(models.QuerySet):
+
+    def popular(self):
+        return self.annotate(models.Count('posts')).order_by('-posts__count')
+
+
+class PostQuerySet(models.QuerySet):
+
+    def popular(self):
+        return self.annotate(models.Count('likes', distinct=True)).order_by('-likes__count')
+
+    def fetch_with_comments_count(self):
+        """
+        Fetches the comments count for each post in
+        the queryset and adds it as a new attribute
+        to each post object. Useful if you don't want
+        to use second 'annotate' method in your query,
+        because it slows down the query.
+
+        :return: posts query with comments_count field
+        """
+        posts_ids = [post.id for post in self]
+        posts_with_comments = Post.objects.filter(id__in=posts_ids).annotate(
+            comments_count=models.Count('comments'))
+        ids_and_comments = posts_with_comments.values_list('id', 'comments_count')
+        count_for_id = dict(ids_and_comments)
+        for post in self:
+            post.comments_count = count_for_id[post.id]
+        return self
+
+    def year(self, year):
+        posts_at_year = self.filter(published_at__year=year).order_by('published_at')
+        return posts_at_year
+
+
 class Post(models.Model):
     title = models.CharField('Заголовок', max_length=200)
     text = models.TextField('Текст')
     slug = models.SlugField('Название в виде url', max_length=200)
     image = models.ImageField('Картинка')
     published_at = models.DateTimeField('Дата и время публикации')
+    objects = PostQuerySet.as_manager()
 
     author = models.ForeignKey(
         User,
@@ -39,6 +75,7 @@ class Post(models.Model):
 
 class Tag(models.Model):
     title = models.CharField('Тег', max_length=20, unique=True)
+    objects = TagQuerySet.as_manager()
 
     def __str__(self):
         return self.title
