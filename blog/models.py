@@ -13,8 +13,8 @@ class TagQuerySet(models.QuerySet):
 class PostQuerySet(models.QuerySet):
 
     def popular(self):
-        return self.annotate(models.Count('likes', distinct=True))\
-                   .order_by('-likes__count')
+        return self.annotate(likes_count=models.Count('likes', distinct=True))\
+                   .order_by('-likes_count')
 
     def fetch_with_comments_count(self):
         """
